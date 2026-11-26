@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lernkarten – Flash Cards</title>
+<style>
+  :root {
+    --bg1: #1e1b4b;
+    --bg2: #312e81;
+    --accent: #818cf8;
+    --accent-strong: #6366f1;
+    --green: #34d399;
+    --orange: #fb923c;
+    --text: #eef2ff;
+    --muted: #a5b4fc;
+    --card-face: #ffffff;
+    --card-text: #1e293b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(160deg, var(--bg1), var(--bg2));
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 48px;
+  }
+
+  header {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: 0.5px; }
+
+  .tabs { display: flex; gap: 8px; }
+
+  .tab-btn {
+    border: 1px solid rgba(255,255,255,0.25);
+    background: transparent;
+    color: var(--muted);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab-btn.active {
+    background: var(--accent-strong);
+    color: white;
+    border-color: var(--accent-strong);
+  }
+
+  main { width: 100%; max-width: 640px; }
+
+  .hidden { display: none !important; }
+
+  /* ---------- Lern-Ansicht ---------- */
+  .progress-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .card-scene {
+    perspective: 1400px;
+    width: 100%;
+    height: 300px;
+    margin-bottom: 20px;
+  }
+
+  .card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0.1, 0.2, 1.2);
+    cursor: pointer;
+  }
+
+  .card.flipped { transform: rotateY(180deg); }
+
+  .card-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 18px;
+    background: var(--card-face);
+    color: var(--card-text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+    overflow-y: auto;
+    word-break: break-word;
+  }
+
+  .card-face.back { transform: rotateY(180deg); background: #eef2ff; }
+
+  .card-label {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+  }
+
+  .card-content { font-size: 1.25rem; font-weight: 600; line-height: 1.45; }
+
+  .card-hint {
+    position: absolute;
+    bottom: 14px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+  }
+
+  .actions { display: flex; gap: 14px; justify-content: center; }
+
+  .action-btn {
+    flex: 1;
+    max-width: 260px;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    color: white;
+    transition: transform 0.15s, opacity 0.2s;
+  }
+
+  .action-btn:hover:not(:disabled) { transform: translateY(-2px); }
+
+  .action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  #btn-understood { background: linear-gradient(135deg, #059669, #34d399); }
+  #btn-repeat { background: linear-gradient(135deg, #ea580c, #fb923c); }
+
+  .deck-empty {
+    text-align: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px dashed rgba(255,255,255,0.3);
+    border-radius: 18px;
+    padding: 48px 24px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .deck-empty strong { color: var(--text); }
+
+  #btn-add-first {
+    margin-top: 14px;
+    background: var(--accent-strong);
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* ---------- Verwalten-Ansicht ---------- */
+  .panel {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .panel h2 { font-size: 1.05rem; margin-bottom: 14px; }
+
+  label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--muted); margin: 10px 0 5px; }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 11px 13px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    resize: vertical;
+  }
+
+  textarea:focus, input:focus { outline: 2px solid var(--accent-strong); border-color: transparent; }
+
+  .primary-btn {
+    margin-top: 14px;
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent-strong), #a78bfa);
+    color: white;
+    border: none;
+    padding: 13px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .primary-btn:hover { filter: brightness(1.1); }
+
+  .card-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,0,0,0.2);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .card-row-texts { flex: 1; min-width: 0; }
+
+  .card-row-q {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-row-a {
+    font-size: 0.85rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 3px;
+  }
+
+  .card-row-weight {
+    font-size: 0.75rem;
+    color: var(--muted);
+    background: rgba(255,255,255,0.1);
+    padding: 4px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .icon-btn {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--muted);
+    border-radius: 9px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .icon-btn:hover { color: white; border-color: white; }
+
+  .icon-btn.danger:hover { color: #fca5a5; border-color: #fca5a5; }
+
+  .secondary-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+  .ghost-btn {
+    flex: 1;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--muted);
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .ghost-btn:hover { color: white; border-color: white; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #0f172a;
+    color: white;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    max-width: 90vw;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🃏 Lernkarten</h1>
+  <nav class="tabs">
+    <button class="tab-btn active" id="tab-learn">Lernen</button>
+    <button class="tab-btn" id="tab-manage">Karten verwalten</button>
+  </nav>
+</header>
+
+<main>
+  <!-- Lernen -->
+  <section id="view-learn">
+    <div id="learn-active" class="hidden">
+      <div class="progress-line">
+        <span id="card-counter">Karte 1</span>
+        <span id="session-stats">✅ 0 · 🔁 0</span>
+      </div>
+      <div class="card-scene">
+        <div class="card" id="card" role="button" aria-label="Karte umdrehen">
+          <div class="card-face front">
+            <span class="card-label">Frage</span>
+            <div class="card-content" id="card-question"></div>
+            <span class="card-hint">Klicken zum Umdrehen</span>
+          </div>
+          <div class="card-face back">
+            <span class="card-label">Antwort</span>
+            <div class="card-content" id="card-answer"></div>
+            <span class="card-hint">Wusstest du die Antwort?</span>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="action-btn" id="btn-understood" disabled>✓ Verstanden</button>
+        <button class="action-btn" id="btn-repeat" disabled>🔁 Wiederholen</button>
+      </div>
+    </div>
+    <div id="learn-empty" class="deck-empty">
+      <p><strong>Noch keine Karten vorhanden.</strong><br>
+      Lege zuerst deine Frage-Antwort-Paare an, um loszulernen.</p>
+      <button id="btn-add-first">＋ Karte erstellen</button>
+    </div>
+  </section>
+
+  <!-- Verwalten -->
+  <section id="view-manage" class="hidden">
+    <div class="panel">
+      <h2 id="form-title">Neue Karte erstellen</h2>
+      <label for="inp-question">Frage / Begriff</label>
+      <textarea id="inp-question" rows="2" placeholder="z. B. Was bedeutet Photosynthese?"></textarea>
+      <label for="inp-answer">Antwort / Erklärung</label>
+      <textarea id="inp-answer" rows="3" placeholder="z. B. Prozess, mit dem Pflanzen aus Licht, Wasser und CO₂ Energie herstellen."></textarea>
+      <button class="primary-btn" id="btn-save">Karte speichern</button>
+      <div class="secondary-actions hidden" id="edit-actions">
+        <button class="ghost-btn" id="btn-cancel-edit">Abbrechen</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Deine Karten (<span id="card-count">0</span>)</h2>
+      <div id="card-list"></div>
+      <div class="secondary-actions">
+        <button class="ghost-btn" id="btn-reset-weights">Wichtung zurücksetzen</button>
+        <button class="ghost-btn" id="btn-delete-all">Alle Karten löschen</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  const STORAGE_KEY = "flashcards.decks.v1";
+  const WEIGHT_MIN = 0.25;
+  const WEIGHT_MAX = 8;
+  const WEIGHT_START = 1;
+
+  let cards = [];
+  let currentCard = null;
+  let editingId = null;
+  let session = { seen: 0, understood: 0, repeated: 0 };
+  let recentIds = [];
+
+  const $ = (id) => document.getElementById(id);
+
+  const el = {
+    tabLearn: $("tab-learn"),
+    tabManage: $("tab-manage"),
+    viewLearn: $("view-learn"),
+    viewManage: $("view-manage"),
+    learnActive: $("learn-active"),
+    learnEmpty: $("learn-empty"),
+    card: $("card"),
+    cardQuestion: $("card-question"),
+    cardAnswer: $("card-answer"),
+    cardCounter: $("card-counter"),
+    sessionStats: $("session-stats"),
+    btnUnderstood: $("btn-understood"),
+    btnRepeat: $("btn-repeat"),
+    btnAddFirst: $("btn-add-first"),
+    formTitle: $("form-title"),
+    inpQuestion: $("inp-question"),
+    inpAnswer: $("inp-answer"),
+    btnSave: $("btn-save"),
+    editActions: $("edit-actions"),
+    btnCancelEdit: $("btn-cancel-edit"),
+    cardList: $("card-list"),
+    cardCount: $("card-count"),
+    btnResetWeights: $("btn-reset-weights"),
+    btnDeleteAll: $("btn-delete-all"),
+    toast: $("toast")
+  };
+
+  /* ---------- Speicher ---------- */
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) cards = JSON.parse(raw) || [];
+    } catch (e) {
+      cards = [];
+    }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  }
+
+  /* ---------- Hilfen ---------- */
+  function showToast(msg) {
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => el.toast.classList.remove("show"), 2200);
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function weightLabel(w) {
+    if (w > WEIGHT_START * 1.5) return "häufig";
+    if (w < WEIGHT_START * 0.75) return "selten";
+    return "normal";
+  }
+
+  /* ---------- Tab-Steuern ---------- */
+  function switchTab(which) {
+    const learn = which === "learn";
+    el.tabLearn.classList.toggle("active", learn);
+    el.tabManage.classList.toggle("active", !learn);
+    el.viewLearn.classList.toggle("hidden", !learn);
+    el.viewManage.classList.toggle("hidden", learn);
+    if (learn) renderLearn();
+  }
+
+  el.tabLearn.addEventListener("click", () => switchTab("learn"));
+  el.tabManage.addEventListener("click", () => switchTab("manage"));
+  el.btnAddFirst.addEventListener("click", () => switchTab("manage"));
+
+  /* ---------- Lern-Logik ---------- */
+  function pickWeighted() {
+    const pool = cards.filter((c) => c.id !== (currentCard && currentCard.id));
+    const candidates = pool.length ? pool : cards;
+    const maxRecent = Math.max(0, Math.min(3, candidates.length - 1));
+    let usable = candidates.filter((c) => !recentIds.slice(-maxRecent).includes(c.id));
+    if (!usable.length) usable = candidates;
+
+    const total = usable.reduce((sum, c) => sum + c.weight, 0);
+    let roll = Math.random() * total;
+    for (const c of usable) {
+      roll -= c.weight;
+      if (roll <= 0) return c;
+    }
+    return usable[usable.length - 1];
+  }
+
+  function showCard() {
+    currentCard = pickWeighted();
+    recentIds.push(currentCard.id);
+    if (recentIds.length > 6) recentIds.shift();
+    session.seen++;
+
+    el.card.classList.remove("flipped");
+    el.cardQuestion.textContent = currentCard.question;
+    el.cardAnswer.textContent = currentCard.answer;
+    el.cardCounter.textContent = "Karte " + session.seen +
+      (cards.length ? " von aktuellen " + cards.length : "");
+    el.sessionStats.textContent = "✅ " + session.understood + " · 🔁 " + session.repeated;
+
+    el.btnUnderstood.disabled = true;
+    el.btnRepeat.disabled = true;
+
+    el.card.style.animation = "none";
+    void el.card.offsetWidth;
+  }
+
+  el.card.addEventListener("click", () => {
+    if (!currentCard) return;
+    el.card.classList.toggle("flipped");
+    el.btnUnderstood.disabled = false;
+    el.btnRepeat.disabled = false;
+  });
+
+  el.btnUnderstood.addEventListener("click", () => {
+    currentCard.weight = Math.max(WEIGHT_MIN, currentCard.weight / 2);
+    session.understood++;
+    save();
+    showCard();
+  });
+
+  el.btnRepeat.addEventListener("click", () => {
+    currentCard.weight = Math.min(WEIGHT_MAX, currentCard.weight * 2);
+    session.repeated++;
+    save();
+    showCard();
+  });
+
+  function renderLearn() {
+    const hasCards = cards.length > 0;
+    el.learnActive.classList.toggle("hidden", !hasCards);
+    el.learnEmpty.classList.toggle("hidden", hasCards);
+    if (hasCards && !currentCard) showCard();
+  }
+
+  /* ---------- Verwalten ---------- */
+  function resetForm() {
+    editingId = null;
+    el.formTitle.textContent = "Neue Karte erstellen";
+    el.btnSave.textContent = "Karte speichern";
+    el.inpQuestion.value = "";
+    el.inpAnswer.value = "";
+    el.editActions.classList.add("hidden");
+  }
+
+  el.btnSave.addEventListener("click", () => {
+    const q = el.inpQuestion.value.trim();
+    const a = el.inpAnswer.value.trim();
+    if (!q || !a) {
+      showToast("Bitte Frage und Antwort ausfüllen.");
+      return;
+    }
+    if (editingId) {
+      const card = cards.find((c) => c.id === editingId);
+      if (card) {
+        card.question = q;
+        card.answer = a;
+      }
+      showToast("Karte aktualisiert.");
+    } else {
+      cards.push({
+        id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+        question: q,
+        answer: a,
+        weight: WEIGHT_START
+      });
+      showToast("Karte hinzugefügt.");
+    }
+    save();
+    resetForm();
+    renderCardList();
+    renderLearn();
+  });
+
+  el.btnCancelEdit.addEventListener("click", resetForm);
+
+  function renderCardList() {
+    el.cardCount.textContent = cards.length;
+    el.cardList.innerHTML = "";
+    if (!cards.length) {
+      el.cardList.innerHTML = '<p style="color:var(--muted);font-size:0.9rem;">Noch keine Karten. Erstelle oben deine erste Karte.</p>';
+      return;
+    }
+    cards.forEach((card) => {
+      const row = document.createElement("div");
+      row.className = "card-row";
+      row.innerHTML =
+        '<div class="card-row-texts">' +
+          '<div class="card-row-q">' + escapeHtml(card.question) + "</div>" +
+          '<div class="card-row-a">' + escapeHtml(card.answer) + "</div>" +
+        "</div>" +
+        '<span class="card-row-weight">' + weightLabel(card.weight) + "</span>" +
+        '<button class="icon-btn" title="Bearbeiten">✏️</button>' +
+        '<button class="icon-btn danger" title="Löschen">🗑️</button>';
+      const [btnEdit, btnDelete] = row.querySelectorAll(".icon-btn");
+
+      btnEdit.addEventListener("click", () => {
+        editingId = card.id;
+        el.formTitle.textContent = "Karte bearbeiten";
+        el.btnSave.textContent = "Änderungen speichern";
+        el.inpQuestion.value = card.question;
+        el.inpAnswer.value = card.answer;
+        el.editActions.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+
+      btnDelete.addEventListener("click", () => {
+        cards = cards.filter((c) => c.id !== card.id);
+        if (currentCard && currentCard.id === card.id) currentCard = null;
+        save();
+        renderCardList();
+        renderLearn();
+        showToast("Karte gelöscht.");
+      });
+
+      el.cardList.appendChild(row);
+    });
+  }
+
+  el.btnResetWeights.addEventListener("click", () => {
+    cards.forEach((c) => (c.weight = WEIGHT_START));
+    save();
+    renderCardList();
+    showToast("Wichtung aller Karten zurückgesetzt.");
+  });
+
+  el.btnDeleteAll.addEventListener("click", () => {
+    if (!cards.length) return;
+    if (!confirm("Wirklich ALLE Karten löschen? Das kann nicht rückgängig gemacht werden.")) return;
+    cards = [];
+    currentCard = null;
+    session = { seen: 0, understood: 0, repeated: 0 };
+    recentIds = [];
+    save();
+    renderCardList();
+    renderLearn();
+    showToast("Alle Karten gelöscht.");
+  });
+
+  /* ---------- Start ---------- */
+  load();
+  renderCardList();
+  renderLearn();
+})();
+</script>
+</body>
+</html>
