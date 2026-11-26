@@ -75,6 +75,77 @@
     margin-bottom: 12px;
   }
 
+  .filter-panel {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .filter-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .filter-head > span {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  .select-all-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--text);
+    user-select: none;
+  }
+
+  .filter-boxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 10px;
+  }
+
+  .filter-boxes label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
+    cursor: pointer;
+    margin: 0;
+    color: var(--text);
+    user-select: none;
+  }
+
+  .filter-boxes input[type="checkbox"], .select-all-label input[type="checkbox"] {
+    accent-color: var(--accent-strong);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
+  .filter-empty {
+    text-align: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px dashed rgba(255,255,255,0.3);
+    border-radius: 18px;
+    padding: 40px 24px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .filter-empty strong { color: var(--text); }
+
   .card-scene {
     perspective: 1400px;
     width: 100%;
@@ -123,6 +194,22 @@
     letter-spacing: 1.5px;
     text-transform: uppercase;
     color: var(--accent-strong);
+  }
+
+  .card-category {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: #e0e7ff;
+    color: #4338ca;
+    padding: 3px 10px;
+    border-radius: 999px;
+    max-width: 45%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .card-content { font-size: 1.25rem; font-weight: 600; line-height: 1.45; }
@@ -206,6 +293,8 @@
 
   textarea:focus, input:focus { outline: 2px solid var(--accent-strong); border-color: transparent; }
 
+  input::placeholder, textarea::placeholder { color: rgba(165, 180, 252, 0.55); }
+
   .primary-btn {
     margin-top: 14px;
     width: 100%;
@@ -224,7 +313,7 @@
   .card-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     background: rgba(0,0,0,0.2);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 12px;
@@ -251,14 +340,18 @@
     margin-top: 3px;
   }
 
-  .card-row-weight {
-    font-size: 0.75rem;
+  .card-row-meta { display: flex; gap: 6px; }
+
+  .chip {
+    font-size: 0.72rem;
     color: var(--muted);
     background: rgba(255,255,255,0.1);
     padding: 4px 9px;
     border-radius: 999px;
     white-space: nowrap;
   }
+
+  .chip.category { color: #c7d2fe; background: rgba(99,102,241,0.25); }
 
   .icon-btn {
     background: transparent;
@@ -328,15 +421,28 @@
         <span id="card-counter">Karte 1</span>
         <span id="session-stats">✅ 0 · 🔁 0</span>
       </div>
+
+      <div class="filter-panel">
+        <div class="filter-head">
+          <span>Kategorien</span>
+          <label class="select-all-label">
+            <input type="checkbox" id="select-all"> Alle auswählen
+          </label>
+        </div>
+        <div class="filter-boxes" id="category-filters"></div>
+      </div>
+
       <div class="card-scene">
         <div class="card" id="card" role="button" aria-label="Karte umdrehen">
           <div class="card-face front">
             <span class="card-label">Frage</span>
+            <span class="card-category" id="card-category-front"></span>
             <div class="card-content" id="card-question"></div>
             <span class="card-hint">Klicken zum Umdrehen</span>
           </div>
           <div class="card-face back">
             <span class="card-label">Antwort</span>
+            <span class="card-category" id="card-category-back"></span>
             <div class="card-content" id="card-answer"></div>
             <span class="card-hint">Wusstest du die Antwort?</span>
           </div>
@@ -347,6 +453,12 @@
         <button class="action-btn" id="btn-repeat" disabled>🔁 Wiederholen</button>
       </div>
     </div>
+
+    <div id="filter-empty" class="filter-empty hidden">
+      <p><strong>Keine Kategorie ausgewählt.</strong><br>
+      Wähle oben mindestens eine Kategorie aus, um zu lernen.</p>
+    </div>
+
     <div id="learn-empty" class="deck-empty">
       <p><strong>Noch keine Karten vorhanden.</strong><br>
       Lege zuerst deine Frage-Antwort-Paare an, um loszulernen.</p>
@@ -362,6 +474,9 @@
       <textarea id="inp-question" rows="2" placeholder="z. B. Was bedeutet Photosynthese?"></textarea>
       <label for="inp-answer">Antwort / Erklärung</label>
       <textarea id="inp-answer" rows="3" placeholder="z. B. Prozess, mit dem Pflanzen aus Licht, Wasser und CO₂ Energie herstellen."></textarea>
+      <label for="inp-category">Kategorie</label>
+      <input type="text" id="inp-category" list="category-suggestions" placeholder="z. B. Allgemein (frei wählbar)">
+      <datalist id="category-suggestions"></datalist>
       <button class="primary-btn" id="btn-save">Karte speichern</button>
       <div class="secondary-actions hidden" id="edit-actions">
         <button class="ghost-btn" id="btn-cancel-edit">Abbrechen</button>
@@ -386,6 +501,8 @@
   "use strict";
 
   const STORAGE_KEY = "flashcards.decks.v1";
+  const FILTER_KEY = "flashcards.filter.v1";
+  const DEFAULT_CATEGORY = "Allgemein";
   const WEIGHT_MIN = 0.25;
   const WEIGHT_MAX = 8;
   const WEIGHT_START = 1;
@@ -395,6 +512,7 @@
   let editingId = null;
   let session = { seen: 0, understood: 0, repeated: 0 };
   let recentIds = [];
+  let selectedCategories = new Set();
 
   const $ = (id) => document.getElementById(id);
 
@@ -405,9 +523,14 @@
     viewManage: $("view-manage"),
     learnActive: $("learn-active"),
     learnEmpty: $("learn-empty"),
+    filterEmpty: $("filter-empty"),
+    categoryFilters: $("category-filters"),
+    selectAll: $("select-all"),
     card: $("card"),
     cardQuestion: $("card-question"),
     cardAnswer: $("card-answer"),
+    cardCategoryFront: $("card-category-front"),
+    cardCategoryBack: $("card-category-back"),
     cardCounter: $("card-counter"),
     sessionStats: $("session-stats"),
     btnUnderstood: $("btn-understood"),
@@ -416,6 +539,8 @@
     formTitle: $("form-title"),
     inpQuestion: $("inp-question"),
     inpAnswer: $("inp-answer"),
+    inpCategory: $("inp-category"),
+    categorySuggestions: $("category-suggestions"),
     btnSave: $("btn-save"),
     editActions: $("edit-actions"),
     btnCancelEdit: $("btn-cancel-edit"),
@@ -431,13 +556,32 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) cards = JSON.parse(raw) || [];
+      cards.forEach((c) => {
+        c.question = c.question || "";
+        c.answer = c.answer || "";
+        c.weight = typeof c.weight === "number" ? c.weight : WEIGHT_START;
+        if (!c.category || !String(c.category).trim()) c.category = DEFAULT_CATEGORY;
+        c.category = String(c.category).trim();
+      });
     } catch (e) {
       cards = [];
+    }
+    try {
+      const rawFilter = localStorage.getItem(FILTER_KEY);
+      if (rawFilter) {
+        selectedCategories = new Set(JSON.parse(rawFilter) || []);
+      }
+    } catch (e) {
+      selectedCategories = new Set();
     }
   }
 
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(cards));
+  }
+
+  function saveFilter() {
+    localStorage.setItem(FILTER_KEY, JSON.stringify([...selectedCategories]));
   }
 
   /* ---------- Hilfen ---------- */
@@ -460,6 +604,16 @@
     return "normal";
   }
 
+  function allCategories() {
+    const unique = [...new Set(cards.map((c) => c.category))];
+    unique.sort((a, b) => a.localeCompare(b, "de"));
+    return unique;
+  }
+
+  function activeCards() {
+    return cards.filter((c) => selectedCategories.has(c.category));
+  }
+
   /* ---------- Tab-Steuern ---------- */
   function switchTab(which) {
     const learn = which === "learn";
@@ -474,10 +628,69 @@
   el.tabManage.addEventListener("click", () => switchTab("manage"));
   el.btnAddFirst.addEventListener("click", () => switchTab("manage"));
 
+  /* ---------- Kategorie-Filter ---------- */
+  function renderFilter() {
+    const categories = allCategories();
+    el.categoryFilters.innerHTML = "";
+
+    if (!selectedCategories.size) {
+      categories.forEach((c) => selectedCategories.add(c));
+      saveFilter();
+    } else {
+      [...selectedCategories].forEach((c) => {
+        if (!categories.includes(c)) selectedCategories.delete(c);
+      });
+    }
+
+    categories.forEach((category) => {
+      const count = cards.filter((c) => c.category === category).length;
+      const label = document.createElement("label");
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = selectedCategories.has(category);
+      cb.addEventListener("change", () => {
+        if (cb.checked) selectedCategories.add(category);
+        else selectedCategories.delete(category);
+        saveFilter();
+        syncSelectAll();
+        restartIfCurrentCardLeft();
+      });
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(category + " (" + count + ")"));
+      el.categoryFilters.appendChild(label);
+    });
+
+    syncSelectAll();
+  }
+
+  function syncSelectAll() {
+    const categories = allCategories();
+    const selectedCount = categories.filter((c) => selectedCategories.has(c)).length;
+    el.selectAll.checked = categories.length > 0 && selectedCount === categories.length;
+    el.selectAll.indeterminate = selectedCount > 0 && selectedCount < categories.length;
+  }
+
+  el.selectAll.addEventListener("change", () => {
+    const categories = allCategories();
+    if (el.selectAll.checked) {
+      categories.forEach((c) => selectedCategories.add(c));
+    } else {
+      selectedCategories.clear();
+    }
+    saveFilter();
+    renderFilter();
+    restartIfCurrentCardLeft();
+  });
+
+  function restartIfCurrentCardLeft() {
+    currentCard = null;
+    recentIds = [];
+    renderLearn();
+  }
+
   /* ---------- Lern-Logik ---------- */
-  function pickWeighted() {
-    const pool = cards.filter((c) => c.id !== (currentCard && currentCard.id));
-    const candidates = pool.length ? pool : cards;
+  function pickWeighted(pool) {
+    const candidates = pool;
     const maxRecent = Math.max(0, Math.min(3, candidates.length - 1));
     let usable = candidates.filter((c) => !recentIds.slice(-maxRecent).includes(c.id));
     if (!usable.length) usable = candidates;
@@ -492,7 +705,9 @@
   }
 
   function showCard() {
-    currentCard = pickWeighted();
+    const pool = activeCards();
+    if (!pool.length) return;
+    currentCard = pickWeighted(pool);
     recentIds.push(currentCard.id);
     if (recentIds.length > 6) recentIds.shift();
     session.seen++;
@@ -500,15 +715,14 @@
     el.card.classList.remove("flipped");
     el.cardQuestion.textContent = currentCard.question;
     el.cardAnswer.textContent = currentCard.answer;
+    el.cardCategoryFront.textContent = currentCard.category;
+    el.cardCategoryBack.textContent = currentCard.category;
     el.cardCounter.textContent = "Karte " + session.seen +
-      (cards.length ? " von aktuellen " + cards.length : "");
+      " · " + pool.length + " aktiv" + (allCategories().length > 1 ? " (" + currentCard.category + ")" : "");
     el.sessionStats.textContent = "✅ " + session.understood + " · 🔁 " + session.repeated;
 
     el.btnUnderstood.disabled = true;
     el.btnRepeat.disabled = true;
-
-    el.card.style.animation = "none";
-    void el.card.offsetWidth;
   }
 
   el.card.addEventListener("click", () => {
@@ -534,24 +748,45 @@
 
   function renderLearn() {
     const hasCards = cards.length > 0;
-    el.learnActive.classList.toggle("hidden", !hasCards);
+    const pool = activeCards();
+
+    el.learnActive.classList.toggle("hidden", !hasCards || !pool.length);
+    el.filterEmpty.classList.toggle("hidden", !hasCards || pool.length > 0);
     el.learnEmpty.classList.toggle("hidden", hasCards);
-    if (hasCards && !currentCard) showCard();
+
+    if (hasCards) {
+      renderFilter();
+      renderSuggestions();
+      if (pool.length && (!currentCard || !selectedCategories.has(currentCard.category))) {
+        showCard();
+      }
+    }
   }
 
   /* ---------- Verwalten ---------- */
+  function renderSuggestions() {
+    el.categorySuggestions.innerHTML = "";
+    allCategories().forEach((category) => {
+      const opt = document.createElement("option");
+      opt.value = category;
+      el.categorySuggestions.appendChild(opt);
+    });
+  }
+
   function resetForm() {
     editingId = null;
     el.formTitle.textContent = "Neue Karte erstellen";
     el.btnSave.textContent = "Karte speichern";
     el.inpQuestion.value = "";
     el.inpAnswer.value = "";
+    el.inpCategory.value = "";
     el.editActions.classList.add("hidden");
   }
 
   el.btnSave.addEventListener("click", () => {
     const q = el.inpQuestion.value.trim();
     const a = el.inpAnswer.value.trim();
+    const category = el.inpCategory.value.trim() || DEFAULT_CATEGORY;
     if (!q || !a) {
       showToast("Bitte Frage und Antwort ausfüllen.");
       return;
@@ -561,19 +796,25 @@
       if (card) {
         card.question = q;
         card.answer = a;
+        card.category = category;
       }
       showToast("Karte aktualisiert.");
+      resetForm();
     } else {
       cards.push({
         id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
         question: q,
         answer: a,
+        category: category,
         weight: WEIGHT_START
       });
-      showToast("Karte hinzugefügt.");
+      showToast("Karte hinzugefügt (" + category + ").");
+    }
+    if (!selectedCategories.has(category)) {
+      selectedCategories.add(category);
+      saveFilter();
     }
     save();
-    resetForm();
     renderCardList();
     renderLearn();
   });
@@ -587,7 +828,12 @@
       el.cardList.innerHTML = '<p style="color:var(--muted);font-size:0.9rem;">Noch keine Karten. Erstelle oben deine erste Karte.</p>';
       return;
     }
-    cards.forEach((card) => {
+    renderSuggestions();
+
+    const sorted = [...cards].sort((a, b) =>
+      a.category.localeCompare(b.category, "de") || a.question.localeCompare(b.question, "de"));
+
+    sorted.forEach((card) => {
       const row = document.createElement("div");
       row.className = "card-row";
       row.innerHTML =
@@ -595,7 +841,10 @@
           '<div class="card-row-q">' + escapeHtml(card.question) + "</div>" +
           '<div class="card-row-a">' + escapeHtml(card.answer) + "</div>" +
         "</div>" +
-        '<span class="card-row-weight">' + weightLabel(card.weight) + "</span>" +
+        '<div class="card-row-meta">' +
+          '<span class="chip category">' + escapeHtml(card.category) + "</span>" +
+          '<span class="chip">' + weightLabel(card.weight) + "</span>" +
+        "</div>" +
         '<button class="icon-btn" title="Bearbeiten">✏️</button>' +
         '<button class="icon-btn danger" title="Löschen">🗑️</button>';
       const [btnEdit, btnDelete] = row.querySelectorAll(".icon-btn");
@@ -606,6 +855,7 @@
         el.btnSave.textContent = "Änderungen speichern";
         el.inpQuestion.value = card.question;
         el.inpAnswer.value = card.answer;
+        el.inpCategory.value = card.category;
         el.editActions.classList.remove("hidden");
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
@@ -637,6 +887,7 @@
     currentCard = null;
     session = { seen: 0, understood: 0, repeated: 0 };
     recentIds = [];
+    selectedCategories = new Set();
     save();
     renderCardList();
     renderLearn();
